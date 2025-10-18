@@ -2,9 +2,11 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart' as bg;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_android/shared_preferences_android.dart';
+import 'mdm_log_service.dart';
 
 class Preferences {
   static late SharedPreferencesWithCache instance;
@@ -38,6 +40,7 @@ class Preferences {
           lastTimestamp, lastLatitude, lastLongitude, lastHeading,
           'device_id_preference', 'server_url_preference', 'accuracy_preference',
           'frequency_preference', 'distance_preference', 'buffer_preference',
+          'hardware_unique_id',
         },
       ),
     );
@@ -62,14 +65,60 @@ class Preferences {
     } else {
       await _migrate();
     }
-    await instance.setString(id, instance.getString(id) ?? (Random().nextInt(90000000) + 10000000).toString());
-    await instance.setString(url, instance.getString(url) ?? 'http://demo.traccar.org:5055');
-    await instance.setString(accuracy, instance.getString(accuracy) ?? 'medium');
-    await instance.setInt(interval, instance.getInt(interval) ?? 300);
-    await instance.setInt(distance, instance.getInt(distance) ?? 75);
-    await instance.setBool(buffer, instance.getBool(buffer) ?? true);
-    await instance.setBool(stopDetection, instance.getBool(stopDetection) ?? true);
-    await instance.setInt(fastestInterval, instance.getInt(fastestInterval) ?? 30);
+    
+    // HARDCODED CONFIGURATION - Generate unique device identifier
+    // We combine timestamp + random to ensure uniqueness per installation
+    // Note: SharedPreferences is cleared on app uninstall, so this generates 
+    // a new ID on fresh install (which is acceptable for fleet management)
+    String deviceId;
+    
+    // Check if we already have a stored unique ID
+    final storedUniqueId = instance.getString('hardware_unique_id');
+    
+    if (storedUniqueId != null && storedUniqueId.isNotEmpty) {
+      // Use existing ID (persists across app updates, but not uninstall/reinstall)
+      deviceId = storedUniqueId;
+      await MDMLogService.info('Using existing device ID: $deviceId');
+    } else {
+      // Generate a new unique ID using high-precision timestamp and random
+      // This ensures uniqueness even if multiple devices are provisioned simultaneously
+      final microseconds = DateTime.now().microsecondsSinceEpoch;
+      final random = Random().nextInt(999999).toString().padLeft(6, '0');
+      deviceId = '$microseconds$random';
+      
+      // Persist it for future app launches
+      await instance.setString('hardware_unique_id', deviceId);
+      await MDMLogService.info('Generated new device ID: $deviceId');
+    }
+    
+    await MDMLogService.info('=== Device Identification ===');
+    await MDMLogService.info('Device ID: $deviceId');
+    await MDMLogService.info('ID Type: Timestamp + Random (unique per installation)');
+    await MDMLogService.info('Persistence: Survives app UPDATES, but not uninstall/reinstall');
+    await MDMLogService.info('============================');
+    
+    // Notify native Android code about the Device ID
+    if (Platform.isAndroid) {
+      try {
+        const MethodChannel('org.traccar.client/mdm_log')
+            .invokeMethod('setDeviceId', {'deviceId': deviceId});
+      } catch (e) {
+        // Ignore if native method is not available
+      }
+    }
+    
+    // Force hardcoded values for internal fleet monitoring
+    await instance.setString(id, deviceId);
+    await instance.setString(url, 'http://20.195.62.89:5055');
+    await instance.setString(accuracy, 'highest');
+    await instance.setInt(interval, 15);
+    await instance.setInt(distance, 0);
+    await instance.setInt(angle, 30);
+    await instance.setInt(heartbeat, 300);
+    await instance.setInt(fastestInterval, 1);
+    await instance.setBool(buffer, true);
+    await instance.setBool(wakelock, true);
+    await instance.setBool(stopDetection, true);
   }
 
   static bg.Config geolocationConfig() {

@@ -1,18 +1,50 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    
+    <!-- Basic permissions -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CAMERA"/>
+    
+    <!-- Location permissions for fleet tracking -->
+    <!-- These will be auto-granted when installed via MDM with Device Owner -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    
+    <!-- Background location for Android 10+ (API 29+) -->
+    <!-- Split into two declarations for auto-grant via MDM -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" 
+        android:minSdkVersion="29"/>
+    
+    <!-- Battery optimization exclusion - allows MDM to whitelist app -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    
+    <!-- Foreground service for background tracking -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" 
+        android:minSdkVersion="34"/>
+    
+    <!-- Prevent app from being stopped when removed from recents -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    
+    <!-- Post notifications for Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" 
+        android:minSdkVersion="33"/>
+    
     <application
         tools:replace="android:label"
         android:label="Traccar Client"
         android:name=".MainApplication"
         android:icon="@mipmap/ic_launcher"
-        android:networkSecurityConfig="@xml/network_security_config">
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:allowBackup="false"
+        android:supportsRtl="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
+            android:excludeFromRecents="false"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
@@ -45,6 +77,26 @@
         <meta-data
             android:name="com.transistorsoft.locationmanager.license"
             android:value="ddc599599cddaa61dfe5bb25c2b46f549c6d749fae5d0273297b304753e2e5e3" />
+        
+        <!-- Restart service to keep app running when cleared from recents -->
+        <service
+            android:name=".RestartService"
+            android:enabled="true"
+            android:exported="false"
+            android:stopWithTask="false" />
+        
+        <!-- Broadcast receiver for boot and restart events -->
+        <receiver
+            android:name=".BootAndRestartReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -56,5 +108,6 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <package android:name="com.hmdm.launcher" />
     </queries>
 </manifest>

@@ -16,7 +16,7 @@ val backgroundGeolocation = project(":flutter_background_geolocation")
 apply { from("${backgroundGeolocation.projectDir}/background_geolocation.gradle") }
 
 val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("../../environment/key.properties")
+val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
@@ -68,6 +68,7 @@ android {
 dependencies {
     implementation("org.slf4j:slf4j-api:2.0.7")
     implementation("com.github.tony19:logback-android:3.0.0")
+    implementation(files("libs/hmdm-1.1.7.aar"))
 }
 
 flutter {

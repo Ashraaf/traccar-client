@@ -5,6 +5,14 @@ import 'package:traccar_client/l10n/app_localizations.dart';
 class PasswordService {
   static final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   static const String _passwordKey = 'password';
+  static const String _hardcodedPassword = '8H7Ylp7LIMe';
+
+  // Initialize hardcoded password on first run
+  static Future<void> init() async {
+    if (!await _secureStorage.containsKey(key: _passwordKey)) {
+      await _secureStorage.write(key: _passwordKey, value: _hardcodedPassword);
+    }
+  }
 
   static Future<bool> authenticate(BuildContext context) async {
     if (!await _secureStorage.containsKey(key: _passwordKey)) return true;
