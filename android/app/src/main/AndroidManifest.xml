@@ -1,8 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.CAMERA" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
+        android:name=".FleetApplication"
+        android:allowBackup="false"
         tools:replace="android:label"
         android:label="Traccar Client"
         android:icon="@mipmap/ic_launcher"
@@ -10,35 +13,31 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
-            android:taskAffinity=""
-            android:theme="@style/LaunchTheme"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-            android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
-            <!-- Specifies an Android theme to apply to this Activity as soon as
-                 the Android process has started. This theme is visible to the user
-                 while the Flutter UI initializes. After that, this theme continues
-                 to determine the Window background behind the Flutter UI. -->
-            <meta-data
-              android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
-            <meta-data
-              android:name="flutter_deeplinking_enabled"
-              android:value="false"
-              />
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="org.traccar.client"/>
-            </intent-filter>
         </activity>
+        <activity android:name="org.traccar.client.PermissionActivity" tools:node="remove" />
+        <receiver android:name="org.traccar.client.BootReceiver" tools:node="remove" />
+        <service android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingService" tools:node="remove" />
+        <service android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingBackgroundService" tools:node="remove" />
+        <receiver android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingReceiver" tools:node="remove" />
+        <provider android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingInitProvider" tools:node="remove" />
+        <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false" />
+        <receiver android:name=".FleetBootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <service
+            android:name=".FleetRetryJob"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -55,6 +54,7 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <package android:name="com.hmdm.launcher" />
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
