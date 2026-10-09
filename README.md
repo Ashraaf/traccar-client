@@ -9,8 +9,8 @@ entry point with native, headless tracking using Traccar Client SDK 1.1.1 and
 Headwind SDK 1.1.10. The iOS implementation is unchanged.
 
 - Package: `org.traccar.client`, retained for in-place fleet upgrades.
-- Version: `10.1.5`, version code `161` (previous local build: `127`).
-- Endpoint: `http://20.24.130.244:5055`, independent of DNS.
+- Version: `10.1.6`, version code `162` (previous local build: `161`).
+- Endpoint: `http://avl.rapidbus-it.com:5055`.
 - Identifier: Headwind's `getDeviceId()`, preserved exactly, including leading
   zeros. No random identifier or old Flutter identifier is used. A previously
   obtained Headwind ID is cached for temporary MDM disconnections; a connected
@@ -113,7 +113,7 @@ Local version properties have been synchronized with the pubspec version.
 
 ```shell
 flutter pub get
-flutter build apk --release --build-name=10.1.5 --build-number=161
+flutter build apk --release --build-name=10.1.6 --build-number=162
 ```
 
 The APK is produced at `build/app/outputs/flutter-apk/app-release.apk`.

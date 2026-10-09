@@ -27,7 +27,7 @@ import kotlinx.coroutines.withContext
 object FleetTracking : HeadwindMDM.EventHandler {
     private const val TAG = "RapidBusTracker"
     private const val RETRY_JOB_ID = 5055
-    private const val SERVER_URL = "http://20.24.130.244:5055"
+    private const val SERVER_URL = "http://avl.rapidbus-it.com:5055"
     private lateinit var context: Context
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val mutex = Mutex()
