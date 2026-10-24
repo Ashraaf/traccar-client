@@ -5,11 +5,11 @@
 ## RapidBus Android Fleet Build
 
 This branch retains the latest upstream project but replaces Android's Flutter
-entry point with native, headless tracking using Traccar Client SDK 1.1.1 and
+entry point with native, headless tracking using Traccar Client SDK 1.1.3 and
 Headwind SDK 1.1.10. The iOS implementation is unchanged.
 
 - Package: `org.traccar.client`, retained for in-place fleet upgrades.
-- Version: `10.1.6`, version code `162` (previous local build: `161`).
+- Version: `10.2.1`, version code `165` (previous fleet build: `162`).
 - Endpoint: `http://avl.rapidbus-it.com:5055`.
 - Identifier: Headwind's `getDeviceId()`, preserved exactly, including leading
   zeros. No random identifier or old Flutter identifier is used. A previously
@@ -113,7 +113,7 @@ Local version properties have been synchronized with the pubspec version.
 
 ```shell
 flutter pub get
-flutter build apk --release --build-name=10.1.6 --build-number=162
+flutter build apk --release --build-name=10.2.1 --build-number=165
 ```
 
 The APK is produced at `build/app/outputs/flutter-apk/app-release.apk`.
