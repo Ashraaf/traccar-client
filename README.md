@@ -9,7 +9,7 @@ entry point with native, headless tracking using Traccar Client SDK 1.1.3 and
 Headwind SDK 1.1.10. The iOS implementation is unchanged.
 
 - Package: `org.traccar.client`, retained for in-place fleet upgrades.
-- Version: `10.2.1`, version code `165` (previous fleet build: `162`).
+- Version: `10.2.4`, version code `168` (previous fleet build: `165`).
 - Endpoint: `http://avl.rapidbus-it.com:5055`.
 - Identifier: Headwind's `getDeviceId()`, preserved exactly, including leading
   zeros. No random identifier or old Flutter identifier is used. A previously
@@ -90,6 +90,30 @@ after a force-stop. Missing grants leave it waiting and logging rather than
 opening a screen. Test the actual Headwind agent and OEM policies on both Android
 15 and 16 before fleet rollout.
 
+### Background Service Startup Failures
+
+`ForegroundServiceStartNotAllowedException` with `mAllowStartForeground false`
+means Android denied starting a foreground service from the current background
+execution context. It is separate from a missing runtime permission. Background
+location (`Allow all the time`, with precise location enabled) is necessary for
+unattended location access, but does not itself bypass foreground-service start
+restrictions. Being managed by Headwind does not make Traccar the device owner.
+
+Ensure the app is exempt from battery optimizations on each affected phone,
+including Samsung/OEM background restrictions. Keep Headwind's run-after-install
+and run-at-boot activation enabled. A retry job is not itself a foreground-service
+start exemption, and retrying cannot overcome a persistent Android policy block.
+No permission or battery-settings screen is opened by this build.
+
+Startup now checks whether the SDK service is already in the foreground before
+requesting another start. A rejected redundant start no longer unconditionally
+stops an existing foreground tracker. The client logs `backgroundLocationGranted`
+and `batteryExempt` when Android rejects a background start, then retains the
+scheduled retry. These values describe checks at that moment, not a guarantee
+that Android will allow a later start. `Tracking already active` identifies an
+enabled tracker with a foreground service; server positions remain the final
+confirmation that GPS and uploads are working.
+
 ### Upgrade and Build
 
 Before deploying, map each old random identifier to its Headwind device ID and
@@ -113,7 +137,7 @@ Local version properties have been synchronized with the pubspec version.
 
 ```shell
 flutter pub get
-flutter build apk --release --build-name=10.2.1 --build-number=165
+flutter build apk --release --build-name=10.2.4 --build-number=168
 ```
 
 The APK is produced at `build/app/outputs/flutter-apk/app-release.apk`.
@@ -133,6 +157,10 @@ Pilot acceptance checks before rolling out:
 	package diagnostics, not only the MDM policy selection.
 5. Drive with the screen off, lose connectivity, then reconnect; verify GPS
 	cadence and buffered uploads. Confirm launcher hiding leaves tracking active.
+6. Synchronize Headwind while tracking is active; verify reports continue without
+	redundant-start errors stopping the service. On a pilot with a blocked retry,
+	inspect both diagnostic flags, correct MDM/battery policies, reactivate through
+	Headwind, and verify reports resume without a client screen.
 
 Transport is HTTP, so GPS data is not encrypted on the public network. Use a
 company VPN or an HTTPS endpoint with a certificate valid for the address if

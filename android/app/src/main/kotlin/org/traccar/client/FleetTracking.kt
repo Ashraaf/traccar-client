@@ -1,6 +1,8 @@
 package org.traccar.client
 
 import android.Manifest
+import android.app.ActivityManager
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.admin.DevicePolicyManager
 import android.app.job.JobInfo
 import android.app.job.JobScheduler
@@ -47,7 +49,20 @@ object FleetTracking : HeadwindMDM.EventHandler {
                 try {
                     reconcile()
                 } catch (exception: Exception) {
-                    report("Tracking startup failed: ${exception.javaClass.simpleName}: ${exception.message}")
+                    val restriction = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                        exception is ForegroundServiceStartNotAllowedException) {
+                        val powerManager = context.getSystemService(PowerManager::class.java)
+                        val backgroundLocation = context.checkSelfPermission(
+                            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                        ) == PackageManager.PERMISSION_GRANTED
+                        "Android blocked a background service start; " +
+                            "backgroundLocationGranted=$backgroundLocation; " +
+                            "batteryExempt=${powerManager.isIgnoringBatteryOptimizations(context.packageName)}; " +
+                            "configure battery exemption or activate through Headwind; "
+                    } else {
+                        ""
+                    }
+                    report("Tracking startup failed: $restriction${exception.javaClass.simpleName}: ${exception.message}")
                     scheduleRetry()
                     false
                 }
@@ -128,20 +143,37 @@ object FleetTracking : HeadwindMDM.EventHandler {
         if (tracker.config != config) {
             tracker = tracker.updateConfig(config)
         }
-        tracker.start()
+        if (tracker.state.value.enabled && isTrackerServiceInForeground()) {
+            report("Tracking already active; Headwind device ID=$deviceId; server=$SERVER_URL")
+            return true
+        }
         try {
-            val intent = Intent(context, TrackerService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            if (!isTrackerServiceInForeground()) {
+                val intent = Intent(context, TrackerService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
             }
+            tracker.start()
         } catch (exception: Exception) {
-            tracker.stop()
+            if (!isTrackerServiceInForeground()) {
+                tracker.stop()
+            }
             throw exception
         }
         report("Tracking enabled; Headwind device ID=$deviceId; server=$SERVER_URL")
         return true
+    }
+
+    @Suppress("DEPRECATION")
+    private fun isTrackerServiceInForeground(): Boolean {
+        val manager = context.getSystemService(ActivityManager::class.java)
+        val component = ComponentName(context, TrackerService::class.java)
+        return manager.getRunningServices(Int.MAX_VALUE).any {
+            it.service == component && it.foreground
+        }
     }
 
     private suspend fun grantDelegatedPermissions(permissions: List<String>) = withContext(Dispatchers.IO) {
