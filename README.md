@@ -5,11 +5,11 @@
 ## RapidBus Android Fleet Build
 
 This branch retains the latest upstream project but replaces Android's Flutter
-entry point with native, headless tracking using Traccar Client SDK 1.1.3 and
+entry point with native, headless tracking using Traccar Client SDK 1.1.4 and
 Headwind SDK 1.1.10. The iOS implementation is unchanged.
 
 - Package: `org.traccar.client`, retained for in-place fleet upgrades.
-- Version: `10.2.4`, version code `168` (previous fleet build: `165`).
+- Android release: `10.2.4.1`, version code `169` (previous fleet build: `168`).
 - Endpoint: `http://avl.rapidbus-it.com:5055`.
 - Identifier: Headwind's `getDeviceId()`, preserved exactly, including leading
   zeros. No random identifier or old Flutter identifier is used. A previously
@@ -114,6 +114,28 @@ that Android will allow a later start. `Tracking already active` identifies an
 enabled tracker with a foreground service; server positions remain the final
 confirmation that GPS and uploads are working.
 
+For the 10.2.4 upgrade regression, this release restores enabling
+the tracker before requesting its service and logs SDK initialization,
+configuration updates, tracker enabling, and service startup separately. A
+30-second coroutine timeout reports suspended startup failures and schedules a
+retry; it cannot interrupt blocking native code or prevent an asynchronous crash.
+The Flutter plugin is pinned to 1.1.4 and the native dependency explicitly
+requests 1.1.4. Check `releaseRuntimeClasspath` dependency insight after future
+merges to confirm the selected native version.
+
+Recovery was confirmed on RAPID191 and RAPID268 on 2026-11-01: Headwind logs
+showed successful startup and subsequent active-service checks, and fresh AVL
+was received by Traccar without a reported reboot. The exact cause of the
+original regression remains unproven. Roll out in small batches and verify
+fresh server positions rather than relying on startup logs alone. If logging
+ends at a startup stage without a timeout or failure message, collect Android
+logcat for a crash or blocking call before proceeding with rollout.
+
+Headwind displayed a duplicate-version upload error, but updated recovery code
+still reached these phones. The popup alone does not establish rejection or
+successful installation; check the installed version and device logs. Renaming
+an APK file does not change its embedded version.
+
 ### Upgrade and Build
 
 Before deploying, map each old random identifier to its Headwind device ID and
@@ -133,11 +155,13 @@ Use Flutter 3.47.6 (or a compatible newer stable SDK), Android SDK 37.0, and a
 supported JDK 17 or newer. The Android build explicitly selects API 37 minor 0
 to match the installed `android-37.0` platform. Keep the upstream Gradle 9.3.1
 wrapper configuration.
-Local version properties have been synchronized with the pubspec version.
+The pubspec uses Dart version `10.2.4+169`. The Android release command overrides
+the version name to `10.2.4.1`; code 169 is also the default for ordinary builds.
+Future APKs intended to upgrade devices already on code 169 need a higher code.
 
 ```shell
 flutter pub get
-flutter build apk --release --build-name=10.2.4 --build-number=168
+flutter build apk --release --build-name=10.2.4.1 --build-number=169
 ```
 
 The APK is produced at `build/app/outputs/flutter-apk/app-release.apk`.

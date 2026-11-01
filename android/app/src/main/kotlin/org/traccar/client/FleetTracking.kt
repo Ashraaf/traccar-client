@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 object FleetTracking : HeadwindMDM.EventHandler {
     private const val TAG = "RapidBusTracker"
@@ -47,7 +48,7 @@ object FleetTracking : HeadwindMDM.EventHandler {
         return scope.async(start = CoroutineStart.LAZY) {
             mutex.withLock {
                 try {
-                    reconcile()
+                    withTimeout(30_000) { reconcile() }
                 } catch (exception: Exception) {
                     val restriction = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                         exception is ForegroundServiceStartNotAllowedException) {
@@ -139,8 +140,10 @@ object FleetTracking : HeadwindMDM.EventHandler {
             buffer = true,
             notification = NotificationConfig(text = "Company vehicle location tracking"),
         )
+        report("Initializing tracker SDK; Headwind device ID=$deviceId")
         var tracker = sharedTracker(config)
         if (tracker.config != config) {
+            report("Updating tracker configuration; Headwind device ID=$deviceId")
             tracker = tracker.updateConfig(config)
         }
         if (tracker.state.value.enabled && isTrackerServiceInForeground()) {
@@ -148,7 +151,10 @@ object FleetTracking : HeadwindMDM.EventHandler {
             return true
         }
         try {
+            report("Enabling tracker; Headwind device ID=$deviceId")
+            tracker.start()
             if (!isTrackerServiceInForeground()) {
+                report("Starting tracker foreground service; Headwind device ID=$deviceId")
                 val intent = Intent(context, TrackerService::class.java)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     context.startForegroundService(intent)
@@ -156,7 +162,6 @@ object FleetTracking : HeadwindMDM.EventHandler {
                     context.startService(intent)
                 }
             }
-            tracker.start()
         } catch (exception: Exception) {
             if (!isTrackerServiceInForeground()) {
                 tracker.stop()

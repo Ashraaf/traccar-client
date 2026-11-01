@@ -69,7 +69,7 @@ kotlin {
 
 dependencies {
     implementation(files("libs/hmdm-1.1.10.aar"))
-    implementation("org.traccar:traccar-client-sdk:1.1.3")
+    implementation("org.traccar:traccar-client-sdk:1.1.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 }
 
